@@ -35,11 +35,11 @@ object GetMoneyBack {
   }
 
   def unsafePrintBanner() = {
-    println("Enter a number of rows with names and expenses")
-    println("Input format: <name> <expense>")
-    println("End input by inserting a blank line.")
-    println()
-    println()
+    System.err.println("Enter a number of rows with names and expenses")
+    System.err.println("Input format: <name> <expense>")
+    System.err.println("End input by inserting a blank line.")
+    System.err.println()
+    System.err.println()
   }
 
   def unsafeReadInputs(): List[String] = {
