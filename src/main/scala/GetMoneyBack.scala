@@ -2,10 +2,19 @@ package se.ramn.getmoneyback
 
 import io.StdIn.readLine
 import java.util.Scanner
+import GetMoneyBack.Person
+import GetMoneyBack.Amount
 
 
-case class Expense(person: String, amount: BigDecimal)
-case class Debt(person: String, amount: BigDecimal)
+case class Expense(person: Person, amount: Amount)
+
+
+case class Debt(person: Person, amount: Amount)
+
+
+case class DebtResolution(debtor: Person, creditor: Person, amount: Amount) {
+  override def toString = s"${debtor} should pay ${creditor} ${amount}"
+}
 
 
 object GetMoneyBack {
@@ -18,7 +27,7 @@ object GetMoneyBack {
     if (!inputIsValid(expenses)) {
       throw new IllegalArgumentException("Names must be unique")
     }
-    println(calcDebts(expenses))
+    calcDebts(expenses) foreach println
   }
 
   def unsafePrintBanner() = {
@@ -63,26 +72,21 @@ object GetMoneyBack {
       val Expense(person, amount) = expenseReport
       Debt(person, share - amount)
     }
-
     val (debtors, creditors) = debtPerPerson.partition(_.amount > 0)
-
     val debtsBySize = debtors.toSeq.sortBy(_.amount).reverse
     val creditsBySize = creditors.toSeq.sortBy(_.amount)
-
     val resolutions = resolve(
       debtsBySize=debtsBySize.toList,
       creditsBySize=creditsBySize.toList,
-      resolutions=List.empty[String])
-
-    //println(s"resolutions: $resolutions")
+      resolutions=List.empty[DebtResolution])
     resolutions
   }
 
   def resolve(
     debtsBySize: List[Debt],
     creditsBySize: List[Debt],
-    resolutions: List[String]
-  ): List[String] = {
+    resolutions: List[DebtResolution]
+  ): List[DebtResolution] = {
     debtsBySize match {
       case Debt(debtor, debtAmount) :: debtsTail =>
         creditsBySize match {
@@ -100,13 +104,19 @@ object GetMoneyBack {
             } else if (creditAmount.abs >= debtAmount.abs) {
               val creditorRemaining = creditAmount.abs - debtAmount.abs
               val creditorWIthRemains = Debt(creditor, creditorRemaining)
-              val resolution = s"${debtor} should pay ${creditor} ${debtAmount}"
+              val resolution = DebtResolution(
+                debtor=debtor,
+                creditor=creditor,
+                amount=debtAmount)
               resolve(
                 debtsBySize=debtsTail,
                 creditsBySize=(creditorWIthRemains :: creditsTail),
                 resolutions=(resolutions :+ resolution))
             } else {
-              val resolution = s"${debtor} should pay ${creditor} ${creditAmount.abs}"
+              val resolution = DebtResolution(
+                debtor=debtor,
+                creditor=creditor,
+                amount=creditAmount.abs)
               val remainingDebt = debtAmount - creditAmount.abs
               val debtorWithRemains = Debt(debtor, remainingDebt)
               resolve(

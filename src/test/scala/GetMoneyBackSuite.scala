@@ -31,5 +31,10 @@ class GetMoneyBackSuite extends FunSuite {
         "billy 10"
       ))
     val result = GetMoneyBack.calcDebts(expenses)
+    assert(result === List(
+      DebtResolution("billy", "ada", BigDecimal("72.5")),
+      DebtResolution("leila", "ada", BigDecimal("45")),
+      DebtResolution("leila", "kolle", BigDecimal("17.5"))
+      ))
   }
 }
