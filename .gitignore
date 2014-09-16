@@ -1,0 +1,8 @@
+target
+/common/lib
+/desktop/lib
+/android/src/main/libs/
+.idea
+.idea_modules
+tags
+desktop/src/main/resources/assets/data/testmap.dev.txt
