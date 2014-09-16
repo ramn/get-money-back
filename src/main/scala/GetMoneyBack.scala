@@ -1,7 +1,8 @@
 package se.ramn.getmoneyback
 
-import io.StdIn.readLine
 import java.util.Scanner
+import BigDecimal.RoundingMode
+import io.StdIn.readLine
 import GetMoneyBack.Person
 import GetMoneyBack.Amount
 
@@ -13,7 +14,10 @@ case class Debt(person: Person, amount: Amount)
 
 
 case class DebtResolution(debtor: Person, creditor: Person, amount: Amount) {
-  override def toString = s"${debtor} should pay ${creditor} ${amount}"
+  override def toString = s"${debtor} should pay ${creditor} ${roundedAmount}"
+
+  private def roundedAmount: BigDecimal =
+    amount.setScale(2, RoundingMode.HALF_EVEN)
 }
 
 
