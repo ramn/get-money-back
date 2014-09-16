@@ -7,20 +7,6 @@ import GetMoneyBack.Person
 import GetMoneyBack.Amount
 
 
-case class Expense(person: Person, amount: Amount)
-
-
-case class Debt(person: Person, amount: Amount)
-
-
-case class DebtResolution(debtor: Person, creditor: Person, amount: Amount) {
-  override def toString = s"${debtor} should pay ${creditor} ${roundedAmount}"
-
-  private def roundedAmount: BigDecimal =
-    amount.setScale(2, RoundingMode.HALF_EVEN)
-}
-
-
 object GetMoneyBack {
   type Person = String
   type Amount = BigDecimal
@@ -91,48 +77,98 @@ object GetMoneyBack {
     creditsBySize: List[Debt],
     resolutions: List[DebtResolution]
   ): List[DebtResolution] = {
-    debtsBySize match {
-      case Debt(debtor, debtAmount) :: debtsTail =>
-        creditsBySize match {
-          case Debt(creditor, creditAmount) :: creditsTail =>
-            if (creditAmount == 0) {
-              resolve(
-                debtsBySize=debtsBySize,
-                creditsBySize=creditsTail,
-                resolutions=resolutions)
-            } else if (debtAmount == 0) {
-              resolve(
-                debtsBySize=debtsTail,
-                creditsBySize=creditsBySize,
-                resolutions=resolutions)
-            } else if (creditAmount.abs >= debtAmount.abs) {
-              val creditorRemaining = creditAmount.abs - debtAmount.abs
-              val creditorWIthRemains = Debt(creditor, creditorRemaining)
-              val resolution = DebtResolution(
-                debtor=debtor,
-                creditor=creditor,
-                amount=debtAmount)
-              resolve(
-                debtsBySize=debtsTail,
-                creditsBySize=(creditorWIthRemains :: creditsTail),
-                resolutions=(resolutions :+ resolution))
-            } else {
-              val resolution = DebtResolution(
-                debtor=debtor,
-                creditor=creditor,
-                amount=creditAmount.abs)
-              val remainingDebt = debtAmount - creditAmount.abs
-              val debtorWithRemains = Debt(debtor, remainingDebt)
-              resolve(
-                debtsBySize=(debtorWithRemains :: debtsTail),
-                creditsBySize=creditsTail,
-                resolutions=(resolutions :+ resolution))
-            }
-          case Nil =>
-            resolutions
-        }
-      case Nil =>
-        resolutions
+    if (debtsBySize.isEmpty || creditsBySize.isEmpty) {
+      resolutions
+    } else {
+      val stepResolution= new ResolutionStep(
+        debtsBySize=debtsBySize,
+        creditsBySize=creditsBySize,
+        resolutions=resolutions
+        ).resolve
+      resolve(
+        debtsBySize=stepResolution.debtsBySize,
+        creditsBySize=stepResolution.creditsBySize,
+        resolutions=stepResolution.resolutions)
     }
   }
 }
+
+
+class ResolutionStep(
+    debtsBySize: List[Debt],
+    creditsBySize: List[Debt],
+    resolutions: List[DebtResolution]
+  ) {
+  val Debt(debtor, debtAmount) :: debtsTail = debtsBySize
+  val Debt(creditor, creditAmount) :: creditsTail = creditsBySize
+
+  def resolve: StepResolution = {
+    if (creditAmount == 0) {
+      resolveDroppingCreditor
+    } else if (debtAmount == 0) {
+      resolveDroppingDebtor
+    } else if (creditAmount.abs >= debtAmount.abs) {
+      resolvePartOfCreditAmount
+    } else {
+      resolvePartOfDebtAmount
+    }
+  }
+
+  private def resolveDroppingDebtor =
+    StepResolution(
+      debtsBySize=debtsTail,
+      creditsBySize=creditsBySize,
+      resolutions=resolutions)
+
+  private def resolveDroppingCreditor =
+    StepResolution(
+      debtsBySize=debtsBySize,
+      creditsBySize=creditsTail,
+      resolutions=resolutions)
+
+  private def resolvePartOfCreditAmount = {
+    val creditorRemaining = creditAmount.abs - debtAmount.abs
+    val creditorWithRemains = Debt(creditor, creditorRemaining)
+    val resolution = DebtResolution(
+      debtor=debtor,
+      creditor=creditor,
+      amount=debtAmount)
+    StepResolution(
+      debtsBySize=debtsTail,
+      creditsBySize=(creditorWithRemains :: creditsTail),
+      resolutions=(resolutions :+ resolution))
+  }
+
+  private def resolvePartOfDebtAmount = {
+    val resolution = DebtResolution(
+      debtor=debtor,
+      creditor=creditor,
+      amount=creditAmount.abs)
+    val remainingDebt = debtAmount - creditAmount.abs
+    val debtorWithRemains = Debt(debtor, remainingDebt)
+    StepResolution(
+      debtsBySize=(debtorWithRemains :: debtsTail),
+      creditsBySize=creditsTail,
+      resolutions=(resolutions :+ resolution))
+  }
+}
+
+
+case class Expense(person: Person, amount: Amount)
+
+
+case class Debt(person: Person, amount: Amount)
+
+
+case class DebtResolution(debtor: Person, creditor: Person, amount: Amount) {
+  override def toString = s"${debtor} should pay ${creditor} ${roundedAmount}"
+
+  private def roundedAmount: BigDecimal =
+    amount.setScale(2, RoundingMode.HALF_EVEN)
+}
+
+
+case class StepResolution(
+    debtsBySize: List[Debt],
+    creditsBySize: List[Debt],
+    resolutions: List[DebtResolution])
